@@ -7,7 +7,7 @@ class AlexNet(nn.Module):
         super(AlexNet, self).__init__()
 
         self.features = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=96, kernel_size=11, stride=4, padding=2),
+            nn.Conv2d(in_channels=1, out_channels=96, kernel_size=11, stride=4, padding=2), #in_channels=1 for grayscale images 
             nn.ReLU(inplace=True),
             nn.LocalResponseNorm(size=5, alpha=1e-4, beta=0.75, k=2),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -30,7 +30,7 @@ class AlexNet(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(in_features=256 * 6 * 6, out_features=4096),
+            nn.Linear(in_features=256 * 4 * 4, out_features=4096),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
             nn.Linear(in_features=4096, out_features=4096),
@@ -38,29 +38,24 @@ class AlexNet(nn.Module):
             nn.Linear(in_features=4096, out_features=no_of_classes)
         )
 
-        self.init_parameter()
+        self._init_parameters()
 
-    def init_parameter(self):
-        for layer in self.convs:
+    def _init_parameters(self):
+        for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
                 nn.init.normal_(layer.weight, mean=0, std=0.01)
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, 0.0)
 
-        nn.init.constant_(self.convs[4].bias, 1)
-        nn.init.constant_(self.convs[10].bias, 1)
-        nn.init.constant_(self.convs[12].bias, 1)
+        nn.init.constant_(self.features[4].bias, 1)
+        nn.init.constant_(self.features[10].bias, 1)
+        nn.init.constant_(self.features[12].bias, 1)
 
-        # for layer in self.convs:
-        #     if isinstance(layer, nn.Conv2d):
-        #         nn.init.normal_(layer.weight, mean=0, std=0.01)
-        #         nn.init.constant_(layer.bias, 0)
-
-        nn.init.constant_(self.convs[1].bias, 1)
-        nn.init.constant_(self.convs[4].bias, 1)
+        nn.init.constant_(self.classifier[1].bias, 1)
+        nn.init.constant_(self.classifier[4].bias, 1)
 
     def forward(self, x):
-        x = self.convs(x)
-        x = x.view(x.size(0), 256 * 6 * 6)
+        x = self.features(x)
+        x = x.view(x.size(0), 256 * 4 * 4)
         x = self.classifier(x)
         return x
